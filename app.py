@@ -98,6 +98,8 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### About")
     st.info("This dashboard helps HR professionals predict employee turnover and understand key factors affecting retention.")
+    st.markdown("<p style='text-align: center; color: grey;'>Made with ❤️ by Bhaumik Senwal</p>", unsafe_allow_html=True)
+
 
 @st.cache_data
 def load_data(file=None):
