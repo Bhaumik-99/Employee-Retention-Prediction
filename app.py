@@ -24,7 +24,6 @@ import shap
 import warnings
 warnings.filterwarnings('ignore')
 
-# Set page configuration
 st.set_page_config(
     page_title="HR Analytics Dashboard",
     page_icon="👥",
@@ -32,7 +31,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS styles
 st.markdown("""
 <style>
     .main-header {
@@ -86,7 +84,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Sidebar navigation
 with st.sidebar:
     st.image("https://www.svgrepo.com/show/530443/management.svg", width=100)
     st.markdown("## Navigation")
@@ -94,7 +91,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # File uploader
     st.markdown("## Data Input")
     uploaded_file = st.file_uploader("Upload your HR data (CSV)", type=['csv'])
     sample_data = st.checkbox("Use sample data", value=True)
@@ -103,20 +99,16 @@ with st.sidebar:
     st.markdown("### About")
     st.info("This dashboard helps HR professionals predict employee turnover and understand key factors affecting retention.")
 
-# Load data function
 @st.cache_data
 def load_data(file=None):
     if file is not None:
         data = pd.read_csv(file)
     else:
-        # Sample dataset - using the HR dataset
         data = pd.read_csv("HR_comma_sep.csv")
-        # Rename 'sales' to 'Department' to match user's dataset
         if 'sales' in data.columns:
             data = data.rename(columns={'sales': 'Department'})
     return data
 
-# Check if file is uploaded or use sample data
 if uploaded_file is not None:
     data = load_data(uploaded_file)
 elif sample_data:
@@ -125,27 +117,21 @@ else:
     st.error("Please upload a file or select 'Use sample data'")
     st.stop()
 
-# Feature engineering function
 def engineer_features(df):
     df_new = df.copy()
     
-    # Create features that might be relevant for employee retention
     if 'satisfaction_level' in df.columns and 'last_evaluation' in df.columns:
         df_new['satisfaction_evaluation_ratio'] = df['satisfaction_level'] / (df['last_evaluation'] + 0.001)
     
     if 'average_montly_hours' in df.columns:
-        # Fix typo in column name
         df_new = df_new.rename(columns={'average_montly_hours': 'average_monthly_hours'})
     
     if 'average_monthly_hours' in df_new.columns:
-        # Normal working hours in a month is around 160 (40 hours/week * 4 weeks)
         df_new['overwork_index'] = df_new['average_monthly_hours'] / 160
     
     if 'time_spend_company' in df.columns and 'promotion_last_5years' in df.columns:
-        # Employees who have been at the company for a long time without promotion
         df_new['no_promotion_risk'] = ((df['time_spend_company'] > 4) & (df['promotion_last_5years'] == 0)).astype(int)
     
-    # Convert categorical columns if they're numeric
     if 'Department' in df.columns and pd.api.types.is_numeric_dtype(df['Department']):
         df_new['Department'] = df_new['Department'].astype(str)
     
@@ -154,20 +140,16 @@ def engineer_features(df):
     
     return df_new
 
-# Process data
 data_processed = engineer_features(data)
 
-# Check if target exists
 if 'left' not in data_processed.columns:
     st.error("The dataset must contain a column named 'left' (0 = stayed, 1 = left)")
     st.stop()
 
-# Dashboard page
 if page == "📊 Dashboard":
     # Main header
     st.markdown("<h1 class='main-header'>👥 Employee Retention Analytics Dashboard</h1>", unsafe_allow_html=True)
     
-    # Key metrics row
     total_employees = len(data_processed)
     left_employees = data_processed['left'].sum()
     retention_rate = (1 - (left_employees / total_employees)) * 100
@@ -198,7 +180,6 @@ if page == "📊 Dashboard":
         st.markdown("<div class='metric-label'>Avg Satisfaction</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
     
-    # Main visualizations
     st.markdown("<h2 class='sub-header'>Key Insights</h2>", unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
@@ -267,11 +248,9 @@ if page == "📊 Dashboard":
         st.plotly_chart(fig, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Exploratory Analysis page  
 elif page == "🔍 Exploratory Analysis":
     st.markdown("<h1 class='main-header'>🔍 Exploratory Data Analysis</h1>", unsafe_allow_html=True)
     
-    # Dataset overview
     st.markdown("<h2 class='sub-header'>Dataset Overview</h2>", unsafe_allow_html=True)
     col1, col2 = st.columns([2, 1])
     
@@ -289,23 +268,19 @@ elif page == "🔍 Exploratory Analysis":
         st.text(buffer.getvalue())
         st.markdown("</div>", unsafe_allow_html=True)
     
-    # Correlation analysis
     st.markdown("<h2 class='sub-header'>Correlation Analysis</h2>", unsafe_allow_html=True)
     
-    # Select only numeric columns for correlation
     numeric_cols = data_processed.select_dtypes(include=[np.number]).columns.tolist()
     
     if len(numeric_cols) > 1:
         corr = data_processed[numeric_cols].corr()
         
-        # Heatmap
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale='RdBu_r')
         fig.update_layout(title="Correlation Heatmap")
         st.plotly_chart(fig, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
     
-    # Distribution Analysis
     st.markdown("<h2 class='sub-header'>Distribution Analysis</h2>", unsafe_allow_html=True)
     
     feature_options = numeric_cols.copy()
@@ -328,7 +303,6 @@ elif page == "🔍 Exploratory Analysis":
             st.plotly_chart(fig, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
     
-    # Categorical Analysis
     st.markdown("<h2 class='sub-header'>Categorical Analysis</h2>", unsafe_allow_html=True)
     
     cat_cols = data_processed.select_dtypes(include=['object', 'category']).columns.tolist()
@@ -340,7 +314,6 @@ elif page == "🔍 Exploratory Analysis":
             st.markdown("<div class='card'>", unsafe_allow_html=True)
             selected_cat = st.selectbox("Select categorical feature:", cat_cols)
             
-            # Count and percentage by category
             cat_counts = data_processed.groupby([selected_cat, 'left']).size().unstack(fill_value=0)
             cat_counts['total'] = cat_counts.sum(axis=1)
             cat_counts['left_pct'] = cat_counts[1] / cat_counts['total'] * 100
@@ -367,7 +340,6 @@ elif page == "🔍 Exploratory Analysis":
             st.plotly_chart(fig, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
     
-    # Advanced analysis
     st.markdown("<h2 class='sub-header'>Advanced Analysis</h2>", unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
@@ -411,7 +383,6 @@ elif page == "🔍 Exploratory Analysis":
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.subheader("Satisfaction & Engagement Matrix")
         
-        # Create a matrix based on satisfaction and last evaluation
         data_processed['satisfaction_level_cat'] = pd.cut(data_processed['satisfaction_level'], 
                                                       bins=[0, 0.3, 0.7, 1], 
                                                       labels=['Low', 'Medium', 'High'])
@@ -444,20 +415,16 @@ elif page == "🔍 Exploratory Analysis":
         """)
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Model Training page
 elif page == "🚀 Model Training":
     st.markdown("<h1 class='main-header'>🚀 Predictive Modeling</h1>", unsafe_allow_html=True)
     
-    # Split data for model training
     target_var = 'left'
     X = data_processed.drop(target_var, axis=1)
     y = data_processed[target_var]
     
-    # Identify column types
     categorical_cols = X.select_dtypes(include=['object', 'category']).columns.tolist()
     numerical_cols = X.select_dtypes(include=[np.number]).columns.tolist()
     
-    # Model configuration
     st.markdown("<h2 class='sub-header'>Model Configuration</h2>", unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
@@ -466,15 +433,12 @@ elif page == "🚀 Model Training":
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.subheader("Feature Selection")
         
-        # Allow selecting features
         feature_selection = st.multiselect("Select features to use:", 
                                          X.columns.tolist(),
                                          default=X.columns.tolist())
         
-        # Random state for reproducibility
         random_state = st.slider("Random seed:", min_value=1, max_value=100, value=42)
         
-        # Test size selection
         test_size = st.slider("Test set size:", min_value=0.1, max_value=0.5, value=0.2, step=0.05)
         st.markdown("</div>", unsafe_allow_html=True)
     
@@ -482,28 +446,22 @@ elif page == "🚀 Model Training":
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.subheader("Model Selection")
         
-        # Let user choose models
         models_to_train = st.multiselect(
             "Select models to train:",
             ["Logistic Regression", "Decision Tree", "Random Forest", "Gradient Boosting"],
             default=["Logistic Regression", "Random Forest", "Gradient Boosting"]
         )
         
-        # Hyperparameter tuning
         do_hyperparameter_tuning = st.checkbox("Perform hyperparameter tuning", value=False)
         
-        # Cross-validation
         cv_folds = st.slider("Cross-validation folds:", min_value=2, max_value=10, value=5)
         st.markdown("</div>", unsafe_allow_html=True)
     
-    # Create preprocessor
     X_selected = X[feature_selection]
     
-    # Update categorical and numerical columns based on feature selection
     selected_categorical_cols = [col for col in categorical_cols if col in feature_selection]
     selected_numerical_cols = [col for col in numerical_cols if col in feature_selection]
     
-    # Model Training
     if st.button("Train Models"):
         with st.spinner('Training models... This may take a moment.'):
             # Create preprocessor
@@ -526,7 +484,6 @@ elif page == "🚀 Model Training":
             results = []
             models = {}
             
-            # Configure models
             if "Logistic Regression" in models_to_train:
                 if do_hyperparameter_tuning:
                     model = Pipeline([
@@ -595,18 +552,14 @@ elif page == "🚀 Model Training":
                     ])
                 models["Gradient Boosting"] = model
             
-            # Train all models
             for name, pipeline in models.items():
-                # Train model
                 pipeline.fit(X_train, y_train)
                 
-                # If using GridSearchCV, get best model
                 if do_hyperparameter_tuning:
                     best_params = pipeline.named_steps['model'].best_params_
                     best_model = pipeline.named_steps['model'].best_estimator_
                     st.write(f"**{name} Best Parameters:** {best_params}")
                 
-                # Evaluate on test set
                 y_pred = pipeline.predict(X_test)
                 y_prob = pipeline.predict_proba(X_test)[:, 1]
                 
@@ -615,11 +568,9 @@ elif page == "🚀 Model Training":
                 recall = recall_score(y_test, y_pred)
                 f1 = f1_score(y_test, y_pred)
                 
-                # Calculate ROC curve and AUC
                 fpr, tpr, _ = roc_curve(y_test, y_prob)
                 roc_auc = auc(fpr, tpr)
                 
-                # Store results
                 results.append({
                     'Model': name,
                     'Accuracy': accuracy,
@@ -629,26 +580,20 @@ elif page == "🚀 Model Training":
                     'AUC': roc_auc
                 })
             
-            # Display results
             results_df = pd.DataFrame(results)
             
             st.markdown("<h2 class='sub-header'>Model Performance Results</h2>", unsafe_allow_html=True)
             
-            # Model comparison
             st.markdown("<div class='card'>", unsafe_allow_html=True)
             st.subheader("Model Comparison")
             
-            # Sort by f1 score
             results_df_sorted = results_df.sort_values('F1 Score', ascending=False)
             
-            # Set precision for display
             for col in ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC']:
                 results_df_sorted[col] = results_df_sorted[col].map(lambda x: f"{x:.4f}")
             
-            # Display as table
             st.dataframe(results_df_sorted, use_container_width=True)
             
-            # Visualize performance metrics
             fig = px.bar(results_df_sorted.melt(id_vars=['Model'], 
                                              value_vars=['Accuracy', 'Precision', 'Recall', 'F1 Score', 'AUC']),
                         x='Model', y='value', color='variable', barmode='group',
@@ -657,11 +602,9 @@ elif page == "🚀 Model Training":
             st.plotly_chart(fig, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # Best model details
             best_model_name = results_df_sorted.iloc[0]['Model']
             best_model = models[best_model_name]
             
-            # Confusion Matrix
             st.markdown("<div class='card'>", unsafe_allow_html=True)
             col1, col2 = st.columns(2)
             
@@ -669,7 +612,6 @@ elif page == "🚀 Model Training":
                 st.subheader(f"Confusion Matrix - {best_model_name}")
                 cm = confusion_matrix(y_test, best_model.predict(X_test))
                 
-                # Calculate percentages for annotation
                 cm_sum = np.sum(cm)
                 cm_perc = cm / cm_sum * 100
                 annot = np.empty_like(cm, dtype=str)
@@ -697,7 +639,6 @@ elif page == "🚀 Model Training":
                     
                     fig.add_trace(go.Scatter(x=fpr, y=tpr, name=f"{model_name} (AUC={auc_score:.4f})"))
                 
-                # Add diagonal line
                 fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1], mode='lines', name='Baseline',
                                        line=dict(dash='dash', color='gray')))
                 
@@ -712,7 +653,6 @@ elif page == "🚀 Model Training":
             
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # Feature importance
             st.markdown("<h2 class='sub-header'>Feature Importance Analysis</h2>", unsafe_allow_html=True)
             
             st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -734,15 +674,12 @@ elif page == "🚀 Model Training":
                     encoded_features = encoder.get_feature_names_out(selected_categorical_cols)
                     feature_names.extend(encoded_features)
                 
-                # Get feature importance if the model supports it
                 if hasattr(best_model.named_steps['model'], 'feature_importances_'):
                     importances = best_model.named_steps['model'].feature_importances_
                     
-                    # If using GridSearchCV, extract the best estimator
                     if do_hyperparameter_tuning:
                         importances = best_model.named_steps['model'].best_estimator_.feature_importances_
                     
-                    # Create dataframe of feature importances
                     if len(importances) == len(feature_names):
                         importance_df = pd.DataFrame({
                             'Feature': feature_names,
@@ -757,7 +694,6 @@ elif page == "🚀 Model Training":
                     else:
                         st.warning("Feature names and importance scores don't match. Using permutation importance instead.")
                         
-                        # Compute permutation importance
                         perm_importance = permutation_importance(
                             best_model, X_test, y_test, n_repeats=10, random_state=random_state
                         )
@@ -773,7 +709,6 @@ elif page == "🚀 Model Training":
                         fig.update_layout(yaxis={'categoryorder': 'total ascending'})
                         st.plotly_chart(fig, use_container_width=True)
                 else:
-                    # For models without feature_importances_ attribute, use permutation importance
                     st.write("Using permutation importance for this model type")
                     perm_importance = permutation_importance(
                         best_model, X_test, y_test, n_repeats=10, random_state=random_state
@@ -794,24 +729,19 @@ elif page == "🚀 Model Training":
                         st.warning("Could not calculate feature importance for this model")
             
             with col2:
-                # Partial Dependence Plot 
                 st.subheader("Feature Impact on Predictions")
                 
-                # Select only numeric features for PDP
                 numeric_features = [col for col in selected_numerical_cols if col in X_test.columns]
                 
                 if numeric_features:
                     pdp_feature = st.selectbox("Select feature for analysis:", numeric_features)
                     
-                    # Create grid of values for the selected feature
                     feature_min = X_test[pdp_feature].min()
                     feature_max = X_test[pdp_feature].max()
                     feature_range = np.linspace(feature_min, feature_max, 100)
                     
-                    # Create a copy of X_test
                     pdp_result = []
                     
-                    # For each value in the range, predict probability
                     for value in feature_range:
                         X_pdp = X_test.copy()
                         X_pdp[pdp_feature] = value
@@ -828,14 +758,12 @@ elif page == "🚀 Model Training":
             
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # Save the best model for predictions
             st.session_state['best_model'] = best_model
             st.session_state['feature_names'] = feature_selection
             st.session_state['trained'] = True
             
             st.success("✅ Model training completed successfully! Navigate to the Predictions tab to use the model.")
 
-# Predictions page
 elif page == "🔮 Predictions":
     st.markdown("<h1 class='main-header'>🔮 Employee Turnover Predictions</h1>", unsafe_allow_html=True)
     
@@ -850,13 +778,11 @@ elif page == "🔮 Predictions":
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.write("Enter employee information to predict turnover risk:")
         
-        # Create form for employee data
         col1, col2, col3 = st.columns(3)
         
         employee_data = {}
         
         with col1:
-            # First column of inputs
             if 'satisfaction_level' in feature_names:
                 employee_data['satisfaction_level'] = st.slider("Satisfaction Level", 0.0, 1.0, 0.5, 0.01)
             
@@ -867,7 +793,6 @@ elif page == "🔮 Predictions":
                 employee_data['number_project'] = st.slider("Number of Projects", 1, 10, 4)
         
         with col2:
-            # Second column of inputs
             hour_col = 'average_monthly_hours' if 'average_monthly_hours' in feature_names else 'average_montly_hours'
             if hour_col in feature_names:
                 employee_data[hour_col] = st.slider("Average Monthly Hours", 50, 350, 160, 5)
@@ -879,7 +804,6 @@ elif page == "🔮 Predictions":
                 employee_data['Work_accident'] = st.selectbox("Work Accident", [0, 1], format_func=lambda x: "Yes" if x == 1 else "No")
         
         with col3:
-            # Third column of inputs
             if 'promotion_last_5years' in feature_names:
                 employee_data['promotion_last_5years'] = st.selectbox("Promoted in Last 5 Years", [0, 1], format_func=lambda x: "Yes" if x == 1 else "No")
             
@@ -891,7 +815,6 @@ elif page == "🔮 Predictions":
                 salary_levels = sorted(data_processed['salary'].unique())
                 employee_data['salary'] = st.selectbox("Salary Level", salary_levels)
         
-        # Add engineered features if they were used in training
         if 'satisfaction_evaluation_ratio' in feature_names and 'satisfaction_level' in employee_data and 'last_evaluation' in employee_data:
             employee_data['satisfaction_evaluation_ratio'] = employee_data['satisfaction_level'] / (employee_data['last_evaluation'] + 0.001)
         
@@ -901,10 +824,8 @@ elif page == "🔮 Predictions":
         if 'no_promotion_risk' in feature_names and 'time_spend_company' in employee_data and 'promotion_last_5years' in employee_data:
             employee_data['no_promotion_risk'] = 1 if (employee_data['time_spend_company'] > 4 and employee_data['promotion_last_5years'] == 0) else 0
         
-        # Create DataFrame for prediction
         employee_df = pd.DataFrame([employee_data])
         
-        # Add missing columns with default values
         for feature in feature_names:
             if feature not in employee_df.columns:
                 if feature in data_processed.columns:
@@ -915,20 +836,17 @@ elif page == "🔮 Predictions":
                         default_value = data_processed[feature].mode()[0]
                     employee_df[feature] = default_value
         
-        # Predict button
         if st.button("Predict Turnover Risk"):
             # Make prediction
             try:
                 probability = best_model.predict_proba(employee_df)[0, 1]
                 prediction = best_model.predict(employee_df)[0]
                 
-                # Display result with gauge chart
                 st.markdown("<h3>Prediction Result</h3>", unsafe_allow_html=True)
                 
                 col1, col2 = st.columns([1, 2])
                 
                 with col1:
-                    # Create a gauge chart for turnover risk
                     fig = go.Figure(go.Indicator(
                         mode="gauge+number",
                         value=probability * 100,
@@ -961,7 +879,6 @@ elif page == "🔮 Predictions":
                     st.plotly_chart(fig, use_container_width=True)
                 
                 with col2:
-                    # Prediction interpretation
                     risk_level = "Low" if probability < 0.3 else "Medium" if probability < 0.7 else "High"
                     risk_color = "success-text" if risk_level == "Low" else "warning-text" if risk_level == "Medium" else "danger-text"
                     
@@ -972,10 +889,8 @@ elif page == "🔮 Predictions":
                     else:
                         st.markdown("<p>This employee is <strong>likely to stay</strong> based on the provided information.</p>", unsafe_allow_html=True)
                     
-                    # Risk factors
                     st.markdown("<h4>Key Risk Factors:</h4>", unsafe_allow_html=True)
                     
-                    # Analyze what's contributing to the prediction
                     risk_factors = []
                     
                     if 'satisfaction_level' in employee_data and employee_data['satisfaction_level'] < 0.4:
@@ -1007,7 +922,6 @@ elif page == "🔮 Predictions":
                     else:
                         st.markdown("No significant risk factors identified.")
                     
-                    # Recommendations
                     st.markdown("<h4>Recommendations:</h4>", unsafe_allow_html=True)
                     
                     if risk_level == "High":
@@ -1035,7 +949,6 @@ elif page == "🔮 Predictions":
         
         st.markdown("</div>", unsafe_allow_html=True)
         
-        # Batch prediction
         st.markdown("<h2 class='sub-header'>Batch Prediction</h2>", unsafe_allow_html=True)
         
         st.markdown("<div class='card'>", unsafe_allow_html=True)
@@ -1044,44 +957,36 @@ elif page == "🔮 Predictions":
         uploaded_file = st.file_uploader("Upload employee data (CSV)", type=['csv'])
         
         if uploaded_file is not None:
-            # Load and preview data
             batch_data = pd.read_csv(uploaded_file)
             
             st.subheader("Data Preview")
             st.write(batch_data.head())
             
-            # Check for required columns
             missing_cols = [col for col in feature_names if col not in batch_data.columns]
             
             if missing_cols:
                 st.warning(f"⚠️ The uploaded file is missing these columns: {', '.join(missing_cols)}")
             else:
                 if st.button("Generate Predictions"):
-                    # Make predictions
                     batch_data['turnover_probability'] = best_model.predict_proba(batch_data[feature_names])[:, 1]
                     batch_data['predicted_turnover'] = best_model.predict(batch_data[feature_names])
                     
-                    # Define risk levels
                     batch_data['risk_level'] = pd.cut(
                         batch_data['turnover_probability'], 
                         bins=[0, 0.3, 0.7, 1], 
                         labels=['Low', 'Medium', 'High']
                     )
                     
-                    # Display results
                     st.subheader("Prediction Results")
                     
-                    # Summary
                     risk_summary = batch_data['risk_level'].value_counts().reset_index()
                     risk_summary.columns = ['Risk Level', 'Count']
                     
                     col1, col2 = st.columns([1, 2])
                     
                     with col1:
-                        # Display summary statistics
                         st.write("Risk Level Distribution:")
                         
-                        # Create gauge charts for each risk level
                         fig = px.pie(risk_summary, values='Count', names='Risk Level',
                                    color='Risk Level', 
                                    color_discrete_map={'Low': 'green', 'Medium': 'gold', 'High': 'red'},
@@ -1091,21 +996,16 @@ elif page == "🔮 Predictions":
                         st.plotly_chart(fig, use_container_width=True)
                     
                     with col2:
-                        # Display the table with predictions
                         st.write("Employee Risk Assessment:")
                         
-                        # Style the dataframe
                         batch_display = batch_data.copy()
                         batch_display['turnover_probability'] = (batch_display['turnover_probability'] * 100).round(1).astype(str) + '%'
                         
-                        # Adjust columns for display
                         display_cols = ['predicted_turnover', 'turnover_probability', 'risk_level']
                         
-                        # Add ID columns if they exist
                         id_cols = [col for col in batch_data.columns if 'id' in col.lower() or 'name' in col.lower()]
                         display_cols = id_cols + display_cols
                         
-                        # Add key features that might be interesting
                         key_features = [
                             'satisfaction_level', 
                             'time_spend_company', 
@@ -1117,10 +1017,8 @@ elif page == "🔮 Predictions":
                             if feature in batch_data.columns:
                                 display_cols.append(feature)
                         
-                        # Display data with limited columns
                         st.dataframe(batch_display[display_cols], use_container_width=True)
                     
-                    # Download predictions
                     csv = batch_data.to_csv(index=False)
                     st.download_button(
                         label="Download Predictions as CSV",
@@ -1131,7 +1029,6 @@ elif page == "🔮 Predictions":
         
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Documentation page
 elif page == "📝 Documentation":
     st.markdown("<h1 class='main-header'>📝 Documentation & Help</h1>", unsafe_allow_html=True)
     
