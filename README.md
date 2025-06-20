@@ -37,6 +37,10 @@ To build and evaluate classification models that can accurately predict the targ
 
 This project has been deployed on Streamlit with the following features:
 
+#### **Use below url to see the INTERACTIVE DASHBOARD**
+   ```bash
+     https://employee-retention-prediction-bhaumik-senwal.streamlit.app/
+   ```
 - 🌐 **Interactive Dashboard**: A user-friendly interface to visualize key metrics and insights.
 - 📊 **Exploratory Data Analysis (EDA)**: In-depth analysis of datasets to uncover patterns and trends.
 - 🔄 **Live Model Training**: Train machine learning models in real-time with user-uploaded data.
